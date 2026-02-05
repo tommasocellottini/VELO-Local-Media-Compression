@@ -33,8 +33,8 @@ async function handleFiles(fileList) {
             originalFile: file,
             originalUrl: URL.createObjectURL(file),
             size: file.size,
-            quality: 75,
-            simpleQuality: 75, // Memorizza la qualità manuale
+            quality: 65,
+            simpleQuality: 65, // Memorizza la qualità manuale
             proQuality: null,  // Memorizza la qualità calcolata Pro
             format: state.globalFormat,
             layers: [], // Stores layer data: { quality, blob, mask, pixelCount }
@@ -59,6 +59,7 @@ async function handleFiles(fileList) {
 async function processFile(fileEntry, shouldUpdateUI = true) {
     let sourceImage;
     let width, height;
+    let isResized = false;
 
     // 1. Source Selection (Original or Pre-processed Composite)
     // Usa la sorgente processata (composite) SOLO se siamo in modalità Pro
@@ -83,33 +84,52 @@ async function processFile(fileEntry, shouldUpdateUI = true) {
     }
 
     // 2. Calcolo dimensioni
+    const originalWidth = width;
+    const originalHeight = height;
     if (state.maxWidth && width > state.maxWidth) {
         const scaleFactor = state.maxWidth / width;
         width = state.maxWidth;
         height = Math.round(height * scaleFactor);
+        isResized = true;
     }
 
     const mimeType = `image/${fileEntry.format === 'jpg' ? 'jpeg' : fileEntry.format}`;
     let blob = null;
     
-    // 3. Compressione (Tenta OffscreenCanvas per performance, fallback su DOM Canvas)
-    if (window.OffscreenCanvas) {
-        try {
-            const canvas = new OffscreenCanvas(width, height);
+    // Special handling for PNG: If not resizing and format unchanged, use original file
+    // PNG compression in canvas doesn't optimize well and often increases size
+    const originalFormat = fileEntry.originalFile.type.split('/')[1];
+    // Normalize format comparison (jpeg vs jpg)
+    const normalizedOriginal = originalFormat === 'jpg' ? 'jpeg' : originalFormat;
+    const normalizedCurrent = fileEntry.format === 'jpg' ? 'jpeg' : fileEntry.format;
+    const formatUnchanged = normalizedOriginal === normalizedCurrent;
+    
+    if (fileEntry.format === 'png' && !isResized && formatUnchanged && fileEntry.mode !== 'pro') {
+        // Use original PNG if not resizing and not in Pro mode
+        blob = fileEntry.originalFile;
+    } else {
+        // 3. Compressione (Tenta OffscreenCanvas per performance, fallback su DOM Canvas)
+        // Use quality parameter for all formats
+        const qualityParam = fileEntry.quality / 100;
+        
+        if (window.OffscreenCanvas) {
+            try {
+                const canvas = new OffscreenCanvas(width, height);
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(sourceImage, 0, 0, width, height);
+                blob = await canvas.convertToBlob({ type: mimeType, quality: qualityParam });
+            } catch (e) { console.warn('OffscreenCanvas failed, using fallback', e); }
+        }
+
+        // Fallback standard (DOM Canvas)
+        if (!blob) {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(sourceImage, 0, 0, width, height);
-            blob = await canvas.convertToBlob({ type: mimeType, quality: fileEntry.quality / 100 });
-        } catch (e) { console.warn('OffscreenCanvas failed, using fallback', e); }
-    }
-
-    // Fallback standard (DOM Canvas)
-    if (!blob) {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(sourceImage, 0, 0, width, height);
-        blob = await new Promise(resolve => canvas.toBlob(resolve, mimeType, fileEntry.quality / 100));
+            blob = await new Promise(resolve => canvas.toBlob(resolve, mimeType, qualityParam));
+        }
     }
 
     // Pulizia memoria bitmap
@@ -126,10 +146,19 @@ async function processFile(fileEntry, shouldUpdateUI = true) {
             else if (blob.type === 'image/webp') fileEntry.format = 'webp';
         }
         
-        fileEntry.compressedBlob = blob;
-        fileEntry.compressedUrl = URL.createObjectURL(blob);
-        fileEntry.compressedSize = blob.size;
-        fileEntry.savings = 100 - ((blob.size / fileEntry.size) * 100);
+        // Only use compressed file if it's smaller than original
+        if (blob.size < fileEntry.size) {
+            fileEntry.compressedBlob = blob;
+            fileEntry.compressedUrl = URL.createObjectURL(blob);
+            fileEntry.compressedSize = blob.size;
+            fileEntry.savings = 100 - ((blob.size / fileEntry.size) * 100);
+        } else {
+            // Keep original file if compressed is larger
+            fileEntry.compressedBlob = fileEntry.originalFile;
+            fileEntry.compressedUrl = fileEntry.originalUrl;
+            fileEntry.compressedSize = fileEntry.size;
+            fileEntry.savings = 0;
+        }
 
         if (shouldUpdateUI) updateUI();
     }
@@ -142,14 +171,20 @@ async function optimizeFile(fileEntry) {
     // We define layers by complexity/variance of the original pixels.
     // This allows the user to target specific image features (e.g., smooth backgrounds vs textures).
     
-    // Initialize layers if not present or reset if format changed
-    if (!fileEntry.layers || fileEntry.layers.length === 0 || fileEntry.layers[0].format !== fileEntry.format) {
+    // Initialize layers if not present
+    if (!fileEntry.layers || fileEntry.layers.length === 0) {
         fileEntry.layers = [
-            { name: "Smooth (Background)", threshold: 4, quality: 95, blob: null, mask: null, pixelCount: 0, format: fileEntry.format },
-            { name: "Soft Texture", threshold: 12, quality: 80, blob: null, mask: null, pixelCount: 0, format: fileEntry.format },
-            { name: "High Detail", threshold: 30, quality: 60, blob: null, mask: null, pixelCount: 0, format: fileEntry.format },
+            { name: "Smooth (Background)", threshold: 4, quality: 70, blob: null, mask: null, pixelCount: 0, format: fileEntry.format },
+            { name: "Soft Texture", threshold: 12, quality: 60, blob: null, mask: null, pixelCount: 0, format: fileEntry.format },
+            { name: "High Detail", threshold: 30, quality: 50, blob: null, mask: null, pixelCount: 0, format: fileEntry.format },
             { name: "Sharp Edges", threshold: 255, quality: 40, blob: null, mask: null, pixelCount: 0, format: fileEntry.format }
         ];
+    } else if (fileEntry.layers[0].format !== fileEntry.format) {
+        // Format changed, invalidate all blobs but keep masks
+        fileEntry.layers.forEach(layer => {
+            layer.blob = null;
+            layer.format = fileEntry.format;
+        });
     }
 
     await generateComposite(fileEntry);

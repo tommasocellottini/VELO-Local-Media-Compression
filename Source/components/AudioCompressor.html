@@ -1,5 +1,5 @@
 <div
-    class="container-fluid vh-100 overflow-hidden velo-bg d-flex flex-column"
+    class="container-fluid compressor-container overflow-hidden velo-bg d-flex flex-column"
     id="audioCompressorContainer"
 >
     <!-- Hidden File Input -->
@@ -8,30 +8,30 @@
         id="fileInput"
         multiple
         style="display: none;"
-        accept="image/*"
+        accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac"
     />
     <!-- Initial State Overlay -->
     <div id="initOverlay">
         <div
             class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center init-overlay">
-                <h2 class="text-center"><img
-                        src="assets/VeloLogoText.svg"
-                        alt="VELO"
-                        class="logo-lg"
-                    /></h2>
-                <h2
-                    class="mb-4 text-center"
-                    style="margin-bottom: 8rem !important;"
-                ><img
-                        src="assets/VeloLogoTextAudio.svg"
-                        alt="VELO"
-                        class="logo-md"
-                    /></h2>
+            <h2 class="text-center"><img
+                    src="assets/VeloLogoText.svg"
+                    alt="VELO"
+                    class="logo-lg"
+                /></h2>
+            <h2
+                class="mb-4 text-center"
+                style="margin-bottom: 8rem !important;"
+            ><img
+                    src="assets/VeloLogoTextAudio.svg"
+                    alt="VELO"
+                    class="logo-md"
+                /></h2>
             <button
-                class="btn btn-primary btn-lg shadow-glow-blue z-interactive mb-3"
+                class="btn btn-blue btn-lg shadow-glow-blue z-interactive mb-3"
                 id="btnSelectImages"
-            > Select Audio file </button>
-            <div class="text-white-50 ">or drop one to start</div>
+            > Select Audio Files </button>
+            <div class="text-white-50 ">or drop audio files to start</div>
         </div>
     </div>
     <!-- Main App Interface (Hidden initially) -->
@@ -40,40 +40,47 @@
         class="d-none flex-column h-100"
     >
         <div class="velo-header p-3 d-flex align-items-center justify-content-between">
-            <div class="upload-zone w-500"></div>
-            <h2 class="mb-0 flex-grow-1 text-center"><img
-                    src="assets/VeloLogoTextImageAudio.svg"
-                    alt="VELO"
-                    class="logo-md"
-                /></h2>
-            <div class="d-flex justify-content-end w-500"></div>
+            <div class="" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+                <h2 class="mb-0 flex-grow-1 text-center"><img
+                        src="assets/VeloLogoText.svg"
+                        alt="VELO"
+                        class="logo-md"
+                    /></h2>
+                <h2 class="mb-0 flex-grow-1 text-center"><img
+                        src="assets/VeloLogoTextAudio.svg"
+                        alt="VELO"
+                        class="logo-sm"
+                    /></h2>
+            </div>
         </div>
         <div class="row flex-grow-1 overflow-hidden m-0">
             <!-- Sidebar -->
-            <div class="col-3 velo-bg p-3 overflow-auto border-end border-secondary">
+            <div class="col-3 velo-bg p-3 overflow-auto">
                 <div class="d-flex justify-content-between align-items-center mb-3 h-30">
                     <button
-                        class="btn btn-primary btn-sm z-interactive w-80"
+                        class="btn btn-blue border-normal btn-sm z-interactive w-80"
                         id="btnAddImg"
-                    >Add IMG</button>
+                    >Add Audio</button>
                     <div class="d-flex gap-2">
                         <select
-                            class="form-select form-select-sm bg-dark text-white border-secondary p-0 ps-1 w-80"
+                            class="form-select form-select-sm text-white border-normal p-0 ps-1 w-80"
+                            style="background-color: transparent;"
                             id="globalFormat"
                         >
-                            <option value="jpeg">JPG</option>
-                            <option value="webp">WEBP</option>
-                            <option value="png">PNG</option>
+                            <option value="mp3">MP3</option>
+                            <option value="wav">WAV</option>
                         </select>
                         <button
-                            class="btn btn-danger btn-sm w-80 d-flex justify-content-center align-items-center"
-                            id="btnClear" title="Clear All">
-                            <img src="assets/icons/deleteAll.svg" class="icon" alt="Clear All">
+                            class="btn btn-red btn-sm w-80 d-flex justify-content-center align-items-center"
+                            id="btnClear"
+                            title="Clear All"
+                        >Clear All
                         </button>
                         <button
-                            class="btn btn-success btn-sm w-80 d-flex justify-content-center align-items-center"
-                            id="btnZip" title="Zip All">
-                            <img src="assets/icons/zip.svg" class="icon" alt="Zip All">
+                            class="btn btn-green btn-sm w-80 d-flex justify-content-center align-items-center"
+                            id="btnZip"
+                            title="Zip All"
+                        >Zip All
                         </button>
                     </div>
                 </div>
@@ -87,64 +94,114 @@
             </div>
             <!-- Preview Area -->
             <div
-                class="col-9 velo-bg p-0 d-flex flex-column align-items-center justify-content-center position-relative overflow-hidden">
+                class="col-9 velo-bg p-3 d-flex flex-column align-items-center justify-content-start position-relative overflow-auto">
                 <div
-                    id="previewStage"
-                    class="preview-stage d-none border border-2 border-primary shadow-glow-blue"
+                    id="audioPreviewContainer"
+                    class="w-100 h-100 d-flex flex-column"
                 >
-                    <div
-                        class="velo-container"
-                        id="veloContainer"
-                        tabindex="0"
-                    >
-                        <div class="zoom-controls">
-                            <button
-                                class="zoom-btn before-btn"
-                                id="btnShowOriginal"
-                                title="Show Before"
-                            >Before</button>
-                            <button
-                                class="zoom-btn after-btn active"
-                                id="btnShowOptimized"
-                                title="Show After"
-                            >After</button>
-                            <button
-                                class="zoom-btn reset-btn ms-2"
-                                id="btnResetZoom"
-                                title="Reset Zoom"
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="icon-md"
-                                    viewBox="0 0 16 16"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"
-                                    />
-                                    <path
-                                        d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"
-                                    />
-                                </svg>
+                    <!-- Waveform Display -->
+                    <div class="audio-waveform-container mb-3" id="spectro">
+                        <!-- Waveform View Toggle -->
+                        <div class="d-flex justify-content-center align-items-center mb-2">
+                            <label class="text-white-50 small me-2">Originale</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="waveformViewToggle" checked>
+                                <label class="form-check-label text-white-50 small ms-2" for="waveformViewToggle">
+                                    Processato
+                                </label>
+                            </div>
+                        </div>
+                        <canvas id="waveformCanvas" width="800" height="200"></canvas>
+                        <input type="range" class="form-range" id="waveformScrollbar" 
+                               min="0" max="100" value="0" step="0.1">
+                        
+                        <!-- Playback Control Buttons -->
+                        <div class="playback-controls-container d-flex justify-content-center align-items-center gap-2 mt-3">
+                            <button class="btn btn-playback-control" id="btnBackward10" title="Back 10s">
+                                <img src="assets/backward-10s.svg" alt="Back 10s" class="playback-icon">
+                            </button>
+                            <button class="btn btn-playback-control" id="btnPlay" title="Play">
+                                <img src="assets/play.svg" alt="Play" class="playback-icon">
+                            </button>
+                            <button class="btn btn-playback-control" id="btnPause" title="Pause">
+                                <img src="assets/pause.svg" alt="Pause" class="playback-icon">
+                            </button>
+                            <button class="btn btn-playback-control" id="btnStop" title="Stop">
+                                <img src="assets/stop.svg" alt="Stop" class="playback-icon">
+                            </button>
+                            <button class="btn btn-playback-control" id="btnForward10" title="Forward 10s">
+                                <img src="assets/forward-10s.svg" alt="Forward 10s" class="playback-icon">
                             </button>
                         </div>
-                        <div
-                            class="zoom-frame"
-                            id="zoomFrame"
-                        >
-                            <img
-                                src=""
-                                class="frame-img original-image d-none"
-                                id="imgOriginal"
-                                draggable="false"
-                            />
-                            <img
-                                src=""
-                                class="frame-img optimized-image d-block"
-                                id="imgOptimized"
-                                draggable="false"
-                            />
+                    </div>
+
+                    <!-- Audio Controls -->
+                    <div class="audio-controls-panel border-normal rounded p-3 mb-3">
+                        <h6 class="text-white mb-3">Audio Settings</h6>
+                        
+                        <!-- Compression Settings -->
+                        <div class="mb-3">
+                            <label class="form-label text-white-50 small">Bit Depth</label>
+                            <select class="form-select form-select-sm text-white border-normal" 
+                                    style="background-color: transparent;" id="bitDepthSelect">
+                                <option value="16" selected>16-bit (High Quality)</option>
+                                <option value="8">8-bit (Lower Quality)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-white-50 small">High Frequency Cutoff</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="range" class="form-range" id="cutoffFrequencyRange" 
+                                       min="2000" max="35000" step="1000" value="16000">
+                                <span class="text-white small" id="cutoffFrequencyLabel">16 kHz</span>
+                            </div>
+                        </div>
+
+                        <!-- Trim Controls -->
+                        <div class="mb-3">
+                            <label class="form-label text-white-50 small">Trim Audio</label>
+                            <div class="d-flex gap-2 mb-2">
+                                <div class="flex-grow-1">
+                                    <label class="form-label text-white-50" style="font-size: 0.7rem;">Start (seconds)</label>
+                                    <input type="number" class="form-control form-control-sm text-white border-normal" 
+                                           style="background-color: transparent;" id="trimStart" 
+                                           min="0" step="0.1" value="0">
+                                </div>
+                                <div class="flex-grow-1">
+                                    <label class="form-label text-white-50" style="font-size: 0.7rem;">End (seconds)</label>
+                                    <input type="number" class="form-control form-control-sm text-white border-normal" 
+                                           style="background-color: transparent;" id="trimEnd" 
+                                           min="0" step="0.1" value="0" placeholder="End">
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-blue btn-sm flex-grow-1" id="btnApplyTrim">Apply Trim</button>
+                                <button class="btn btn-secondary btn-sm flex-grow-1" id="btnResetTrim">Reset Trim</button>
+                            </div>
+                        </div>
+
+                        <!-- Audio Playback -->
+                        <div class="mb-3">
+                            <label class="form-label text-white-50 small">Preview</label>
+                            <div class="d-flex gap-2 mb-2">
+                                <button class="btn btn-blue btn-sm flex-grow-1" id="btnPlayOriginal">
+                                    Play Original
+                                </button>
+                                <button class="btn btn-blue btn-sm flex-grow-1" id="btnPlayProcessed">
+                                    Play Processed
+                                </button>
+                            </div>
+                            <!-- Progress Bar -->
+                            <div class="audio-progress-container mb-2">
+                                <input type="range" class="form-range" id="audioProgressBar" 
+                                       min="0" max="100" value="0" step="0.1">
+                            </div>
+                            <!-- Time Display -->
+                            <div class="d-flex justify-content-between text-white-50 small">
+                                <span id="audioCurrentTime">0:00</span>
+                                <span id="audioDuration">0:00</span>
+                            </div>
                         </div>
                     </div>
                 </div>
